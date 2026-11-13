@@ -16,6 +16,5 @@ test('Google Australia loads with a search box', async ({ page }) => {
   await searchBox.fill('Playwright');
   await expect(searchBox).toHaveValue('Playwright');
   await page.waitForTimeout(10000);
-  
-  
+
 });
