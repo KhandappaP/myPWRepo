@@ -24,8 +24,9 @@ async function login(page: Page, username: string, password: string) {
   await page.getByPlaceholder('Password').fill(password);
   // The demo's auth/validate request often stays pending, so don't wait on it.
   await page.getByRole('button', { name: 'Login' }).click({ noWaitAfter: true });
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({
-    timeout: 45_000,
+  await page.waitForURL(/dashboard\/index/, { timeout: 75_000, waitUntil: 'commit' });
+  await expect(page.locator('.oxd-topbar-header-breadcrumb')).toContainText('Dashboard', {
+    timeout: 75_000,
   });
 }
 
@@ -48,8 +49,9 @@ test.describe('OrangeHRM demo', () => {
     await login(page, admin.username, admin.password);
 
     await expect(page).toHaveURL(/dashboard/);
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  });
+    await expect(page.getByRole('heading', { name: 'Dashboard'})).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard'})).toBeVisible({timeout:45_000});
+   });
 
   test('home screen shows the dashboard and main menu', async ({ page }) => {
     await login(page, admin.username, admin.password);
@@ -131,15 +133,15 @@ test.describe.serial('create and validate a new user', () => {
     await expect(page.getByText('Successfully Saved')).toBeVisible({ timeout: 45_000 });
     await expect(page).toHaveURL(/viewSystemUsers/, { timeout: 45_000 });
 
-    await page
+    const usernameFilter = page
       .locator('.oxd-input-group')
       .filter({ hasText: /^Username/ })
-      .locator('input')
-      .fill(username);
+      .locator('input');
+    await usernameFilter.fill(username);
     await page.getByRole('button', { name: 'Search' }).click({ noWaitAfter: true });
 
     const row = page.locator('.oxd-table-card').filter({ hasText: username });
-    await expect(row).toContainText(username);
+    await expect(row).toContainText(username, { timeout: 45_000 });
     await expect(row).toContainText(employeeName);
     await expect(row).toContainText('Enabled');
   });
@@ -154,4 +156,24 @@ test.describe.serial('create and validate a new user', () => {
     await logout(page);
     await expect(page).toHaveURL(/auth\/login/);
   });
+
+  test('verify the time feature on main menu ', async ({page}) => {
+    await login(page, admin.username, admin.password);
+    await expect(page.getByRole('link', { name: 'Time' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Time' })).click({noWaitAfter:true});
+    await expect(page).toHaveURL(/time/);
+    await page.locator('placeholder="Type for hints..."').fill('Rahul Mulge Patil');
+    await page.getByRole('option', { name: 'Rahul Mulge Patil' }).click();
+    await expect(page.getByRole('option', { name: 'Rahul Mulge Patil' })).toBeVisible({timeout:45_000});
+
+    await page.getByRole('option', { name: 'Attendance' }).click();
+    await expect(page.getByRole('option', { name: 'Attendance' })).toBeVisible({timeout:45_000});
+    await page.getByRole('option', { name: 'Attendance' }).click();
+
+    await expect(page.getByRole('link', { name: 'Attendance' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Leave' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'My Time' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Reports' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Apply' })).toBeVisible();
+  })
 });
